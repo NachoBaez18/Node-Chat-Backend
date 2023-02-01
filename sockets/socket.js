@@ -1,7 +1,9 @@
 
+const { comprobarJWT } = require('../helpers/jwt');
 const {io} = require('../index');
-const Band = require('../models/band');
-const Bands = require('../models/bands');
+const {usuarioConectado, usuarioDesconectado, grabarMensaje} = require('../controller/sokect');
+
+
 
 // const bands = new Bands();
 
@@ -11,10 +13,35 @@ const Bands = require('../models/bands');
 // bands.addBand(new Band('Metalica'));
 
 
-io.on('connection', client => {
-    console.log('Cliente conectado');
+io.on('connection', (client) => {
+
+
+    const [valido, uid] = comprobarJWT(client.handshake.headers['x-token']);
+
+    ///*verificar autenticacion
+    if(!valido){return client.discononnect();}
+    console.log('Cliente autenticado');
+     usuarioConectado(uid)
+
+     //* Ingresar al usuario a una sala en particular
+     //* Sala global
+     client.join(uid);
+
+     //! Escuchar del cliente el mensaje-personal
+     client.on('mensaje-personal',async(payload)=>{
+     //?grabar mensaje
+
+      data =  await grabarMensaje(payload);
+      console.log(data);
+
+      io.to(payload.para).emit('mensaje-personal',payload);
+     });
+
     //client.emit('active-bands',bands.getBands());
-    client.on('disconnect', () => {console.log('Cliente desconectado'); });
+    client.on('disconnect', () => {
+      
+      usuarioDesconectado(uid);
+      console.log('Cliente desconectado'); });
 
 
     // client.on('mensaje',(payload) => {
